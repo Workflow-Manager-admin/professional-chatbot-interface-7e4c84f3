@@ -1,0 +1,4 @@
+{
+    "command": "PORT=<port> HOST=<host> BROWSER=none npm start",
+    "working_directory": "/home/kavia/workspace/code-generation/professional-chatbot-interface-7e4c84f3/web_chatbot_frontend"
+}
