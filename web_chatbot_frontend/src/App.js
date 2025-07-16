@@ -9,23 +9,34 @@ const BRAND_COLORS = {
 };
 const BOT_NAME = "KaviaBot";
 
-// Message bubble component
+/**
+ * Message bubble component with lively micro-interactions for both user and bot messages.
+ */
 // PUBLIC_INTERFACE
 function MessageBubble({ message, sender }) {
   // Adjust for bot/user colors
   const isBot = sender === "bot";
+  const [animate, setAnimate] = React.useState(false);
+  // Micro-bounce when new message appears
+  useEffect(() => {
+    setAnimate(true);
+    const t = setTimeout(() => setAnimate(false), 450);
+    return () => clearTimeout(t);
+  }, [message]);
   return (
     <div
-      className={`flex mb-2 ${
-        isBot ? "justify-start" : "justify-end"
-      } transition-all`}
+      className={`flex mb-2 ${isBot ? "justify-start" : "justify-end"} transition-all`}
     >
       <div
-        className={`rounded-xl px-4 py-2 max-w-[80%] shadow-sm text-sm ${
-          isBot
+        className={`
+          rounded-xl px-4 py-2 max-w-[80%] shadow-md text-sm focus:outline-none animate-fadein chat-bubble-interact
+          ${isBot
             ? "bg-gray-100 text-gray-900 dark:bg-slate-800 dark:text-white"
-            : "bg-blue-500 text-white"
-        } animate-fadein`}
+            : "bg-blue-500 text-white"}
+          ${animate ? (isBot ? "bubble-bounce-in-left" : "bubble-bounce-in-right") : ""}
+        `}
+        tabIndex={0}
+        style={{boxShadow: animate ? "0 6px 40px -10px #38bdf888" : ""}}
         aria-label={isBot ? "Bot message" : "Your message"}
       >
         {message}
@@ -34,10 +45,11 @@ function MessageBubble({ message, sender }) {
   );
 }
 
-// FAQ accordion component
+// FAQ accordion component with subtle modern pulse micro-interactions
 // PUBLIC_INTERFACE
 function FAQAccordion({ faqs, onSendFAQ }) {
   const [openIndex, setOpenIndex] = useState(null);
+  const [pulseIdx, setPulseIdx] = useState(null);
 
   // Allow keyboard navigation for accessibility
   const handleKeyDown = (idx, e) => {
@@ -46,16 +58,20 @@ function FAQAccordion({ faqs, onSendFAQ }) {
     }
   };
 
+  function handlePulseAsk(idx, faqQ) {
+    setPulseIdx(idx);
+    setTimeout(() => setPulseIdx(null), 350);
+    setTimeout(() => onSendFAQ(faqQ), 120);
+  }
+
   return (
     <div className="w-full mt-4" aria-label="Frequently Asked Questions">
-      <h2 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-2">
-        FAQ
-      </h2>
+      <h2 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-2 faq-bounce-label">FAQ</h2>
       <ul>
         {faqs.map((faq, idx) => (
           <li key={faq.q} className="mb-1">
             <button
-              className="w-full flex justify-between items-center p-3 rounded-lg bg-gray-50 dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-accent"
+              className={`w-full flex justify-between items-center p-3 rounded-lg bg-gray-50 dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-accent faq-toggle-btn ${openIndex === idx ? "faq-expanded" : ""}`}
               aria-expanded={openIndex === idx}
               aria-controls={`faq-panel-${idx}`}
               onClick={() => setOpenIndex(openIndex === idx ? null : idx)}
@@ -69,15 +85,15 @@ function FAQAccordion({ faqs, onSendFAQ }) {
             {openIndex === idx && (
               <div
                 id={`faq-panel-${idx}`}
-                className="px-4 py-2 bg-gray-50 dark:bg-slate-800 border-l-4 border-accent animate-fadein"
+                className="px-4 py-2 bg-gray-50 dark:bg-slate-800 border-l-4 border-accent faq-panel-drop animate-fadein"
                 tabIndex={0}
               >
                 <span className="block mb-2 text-gray-700 dark:text-gray-200">
                   {faq.a}
                 </span>
                 <button
-                  className="mt-2 text-sm px-2 py-1 rounded bg-blue-100 text-blue-800 hover:bg-accent hover:text-white focus:ring-2 focus:ring-accent"
-                  onClick={() => onSendFAQ(faq.q)}
+                  className={`mt-2 text-sm px-2 py-1 rounded bg-blue-100 text-blue-800 hover:bg-accent hover:text-white focus:ring-2 focus:ring-accent faq-ask-btn ${pulseIdx === idx ? "pulse-on-click" : ""}`}
+                  onClick={() => handlePulseAsk(idx, faq.q)}
                   aria-label={`Send "${faq.q}"`}
                 >
                   Ask this
@@ -91,24 +107,33 @@ function FAQAccordion({ faqs, onSendFAQ }) {
   );
 }
 
-// Chat input component with accessible send
+// Chat input component with playful focus/submit micro-interactions
 // PUBLIC_INTERFACE
 function ChatInput({ value, onChange, onSend, disabled, placeholder }) {
   const inputRef = useRef();
+  const [inputFocus, setInputFocus] = useState(false);
+  const [btnPulse, setBtnPulse] = useState(false);
 
   // Send message by pressing Enter
   function handleKeyDown(e) {
     if (e.key === "Enter" && value.trim()) {
-      onSend();
+      handleSendAndPulse();
     }
+  }
+
+  // Pulse animation on submit
+  function handleSendAndPulse() {
+    setBtnPulse(true);
+    setTimeout(() => setBtnPulse(false), 250);
+    onSend();
   }
 
   return (
     <form
-      className="flex bg-white dark:bg-slate-800 border-t border-slate-300 dark:border-slate-700 p-2 gap-2"
+      className={`flex bg-white dark:bg-slate-800 border-t border-slate-300 dark:border-slate-700 p-2 gap-2 chat-input-panel ${inputFocus ? "input-focus-expand" : ""}`}
       onSubmit={e => {
         e.preventDefault();
-        if (value.trim()) onSend();
+        if (value.trim()) handleSendAndPulse();
       }}
       aria-label="Chat input"
     >
@@ -116,9 +141,11 @@ function ChatInput({ value, onChange, onSend, disabled, placeholder }) {
         aria-label="Type your message"
         ref={inputRef}
         type="text"
-        className="flex-1 rounded-lg border border-gray-300 dark:border-slate-600 px-4 py-2 focus:ring-2 focus:ring-accent focus:outline-none bg-gray-50 dark:bg-slate-700 text-black dark:text-white transition"
+        className={`flex-1 rounded-lg border border-gray-300 dark:border-slate-600 px-4 py-2 focus:ring-2 focus:ring-accent focus:outline-none bg-gray-50 dark:bg-slate-700 text-black dark:text-white transition chat-input-main ${inputFocus ? "input-active-highlight" : ""}`}
         placeholder={placeholder}
         value={value}
+        onFocus={() => setInputFocus(true)}
+        onBlur={() => setInputFocus(false)}
         onChange={e => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
         disabled={disabled}
@@ -127,8 +154,9 @@ function ChatInput({ value, onChange, onSend, disabled, placeholder }) {
       <button
         type="submit"
         disabled={disabled}
-        className="bg-accent px-4 py-2 rounded-lg text-white font-semibold shadow transition hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50"
+        className={`bg-accent px-4 py-2 rounded-lg text-white font-semibold shadow transition hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50 send-btn-microanim ${btnPulse ? "pulse-on-click" : ""}`}
         aria-label="Send message"
+        tabIndex={0}
       >
         <span className="hidden sm:inline">Send</span>
         <span className="sm:hidden text-lg" aria-hidden="true">
@@ -139,19 +167,27 @@ function ChatInput({ value, onChange, onSend, disabled, placeholder }) {
   );
 }
 
-// Branding header
+// Branding header with lively accent ring micro-interaction
 // PUBLIC_INTERFACE
 function BrandingHeader() {
+  const [active, setActive] = useState(false);
   return (
-    <header className="flex items-center gap-3 justify-center py-4 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 sticky top-0 z-20">
+    <header className="flex items-center gap-3 justify-center py-4 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 sticky top-0 z-20 branding-header-micros">
       <span
-        className="w-10 h-10 rounded-full bg-accent flex justify-center items-center font-extrabold text-2xl text-white shadow"
+        className={`w-10 h-10 rounded-full bg-accent flex justify-center items-center font-extrabold text-2xl text-white shadow logo-micro-circle ${active ? "pulse-on-brand" : ""}`}
         aria-label="Company logo"
+        tabIndex={0}
+        onMouseDown={() => setActive(true)}
+        onMouseUp={() => setActive(false)}
+        onMouseLeave={() => setActive(false)}
+        onKeyDown={e => (e.key === "Enter" || e.key === " ") && setActive(true)}
+        onKeyUp={() => setActive(false)}
+        aria-pressed={active}
+        role="button"
       >
-        {/* Placeholder, replace with actual logo if needed */}
         <span>K</span>
       </span>
-      <span className="font-extrabold text-lg text-black dark:text-white tracking-wide">
+      <span className="font-extrabold text-lg text-black dark:text-white tracking-wide company-brand-title">
         Kavia Company Chatbot
       </span>
     </header>
